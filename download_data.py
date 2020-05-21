@@ -46,7 +46,6 @@ def get_bird_recording_info(genus, species, page = 1):
 
     return recordings
 
-
 def download_bird_songs(genus, species, label):
     label_path = os.path.join(DATASET_BIRDS_PATH, label)
     if os.path.exists(label_path):
@@ -63,10 +62,19 @@ def download_bird_songs(genus, species, label):
         r = requests.get(recording_url, allow_redirects=True)
 
         file_name = recording['file-name']
-        new_name = label + '.' + os.path.splitext(file_name)[0] + '.wav'
 
         s = io.BytesIO(r.content)
-        AudioSegment.from_file(s, format="mp3").export(os.path.join(label_path, new_name), format="wav")
+        audio = AudioSegment.from_file(s, format="mp3")
+        # Split audio
+        MAX_MS = 30000
+        if len(audio) <= MAX_MS:
+            new_name = label + '.' + os.path.splitext(file_name)[0] + '.wav'
+            audio.export(os.path.join(label_path, new_name), format="wav")
+        else:
+            for pos in range(0, len(audio), MAX_MS):
+                section = audio[pos:pos + MAX_MS]
+                new_name = label + '.' + pos + '.' + os.path.splitext(file_name)[0] + '.wav'
+                section.export(os.path.join(label_path, new_name), format="wav")
 
 # Download background noise
 DATASET_SNSD_BACKGROUND_NOISE_TRAIN_SVN_URL = "https://github.com/microsoft/MS-SNSD/trunk/noise_train"
@@ -86,5 +94,11 @@ def download_and_extract_ms_snsd():
         subprocess.call(["/usr/bin/svn", "checkout", DATASET_SNSD_BACKGROUND_NOISE_TRAIN_SVN_URL, DATASET_SNSD_TRAIN_PATH])
         subprocess.call(["/usr/bin/svn", "checkout", DATASET_SNSD_BACKGROUND_NOISE_TEST_SVN_URL, DATASET_SNSD_TEST_PATH])
 
+
 download_and_extract_ms_snsd()
 download_bird_songs('baeolophus', 'inornatus', 'titmouse')
+
+# Download files into temp locations (preserve train/test)
+# Split into chunks by file prefix (e.g. train/AirConditioner/1.wav etc)
+# Count number of bird song files
+# Get the same number of noise files but split across all types
