@@ -50,7 +50,7 @@ OUTPUT_NOISE_PATH = os.path.join(OUTPUT_PATH, "noise")
 # The number of frames per second of audio
 EXPECTED_FRAMES = 16000
 # The percentage of data reserved for testing
-TEST_SPLIT = 10
+TEST_SPLIT = 20
 # Used by `which_set()` from speech commands dataset
 MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 # How long each file can be max
@@ -146,12 +146,12 @@ def download_bird_songs(genus, species, label):
         # Split audio
         MAX_MS = 30000
         if len(audio) <= MAX_MS:
-            new_name = label + '.' + os.path.splitext(file_name)[0] + '.wav'
+            new_name = os.path.splitext(file_name)[0] + '.wav'
             audio.export(os.path.join(label_path, new_name), format="wav")
         else:
             for pos in range(0, len(audio), MAX_MS):
                 section = audio[pos:pos + MAX_MS]
-                new_name = label + '.' + pos + '.' + os.path.splitext(file_name)[0] + '.wav'
+                new_name = os.path.splitext(file_name)[0] + '.' + str(pos) + '.wav'
                 section.export(os.path.join(label_path, new_name), format="wav")
 
 # Move files from one dir to another, deleting the original dir and
@@ -320,7 +320,6 @@ def create_new_split(class_names, output_directory=None, noise=True, sample_perc
 
     return output_directory
 
-
 def create_noise_splits(data_noise, data_test):
     noise_test_data = []
     training_sample_count = 0
@@ -357,11 +356,11 @@ def create_class_splits(data_classes, data_test):
         data_classes[class_name] = []
         data_test[class_name] = []
         # Assign each file to the right place
-        files = [os.path.join(DATASET_SPEECH_PATH, class_name, file_name) for file_name in os.listdir(os.path.join(DATASET_SPEECH_PATH, class_name))]
+        files = [os.path.join(DATASET_BIRDS_PATH, class_name, file_name) for file_name in os.listdir(os.path.join(DATASET_BIRDS_PATH, class_name))]
         random.shuffle(files)
         split_point = math.ceil(len(files) / (100 / TEST_SPLIT))
-        data_classes[class_name].extend(files[:split_point])
-        data_test[class_name].extend(files[split_point:])
+        data_classes[class_name].extend(files[split_point:])
+        data_test[class_name].extend(files[:split_point])
 
 def init():
     # Set up dataset and output directories
@@ -379,11 +378,8 @@ if __name__ == "__main__":
     init()
     # Create datasets with varying amounts of data
     # Note: All datasets will be balanced, so their size depends on the size of their smallest class (including noise).
-    #       The same test set is used for each dataset, independent of size (for unknown, the test set's content depends
-    #       on the selected classes, since unknown is made up of unselected classes).
+    #       The same test set is used for each dataset, independent of size.
     percentages = [100]
 
     for percentage in percentages:
-        create_new_split(["yes", "no"], sample_percentage=percentage)
-        create_new_split(["yes", "no"], sample_percentage=percentage)
-        create_new_split(["yes", "no"], sample_percentage=percentage)
+        create_new_split(["titmouse"], sample_percentage=percentage)
