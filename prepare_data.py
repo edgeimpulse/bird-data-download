@@ -54,7 +54,9 @@ TEST_SPLIT = 20
 # Used by `which_set()` from speech commands dataset
 MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 # How long each file can be max
-AUDIO_SPLIT_MS = 30000
+AUDIO_MAX_MS = 30000
+# How long each file can be min
+AUDIO_MIN_MS = 4000
 
 # Hold paths to data
 global_data_noise = {}
@@ -144,13 +146,16 @@ def download_bird_songs(genus, species, label):
         s = io.BytesIO(r.content)
         audio = AudioSegment.from_file(s, format="mp3")
         # Split audio
-        MAX_MS = 30000
-        if len(audio) <= MAX_MS:
+        AUDIO_MAX_MS = 30000
+        if len(audio) <= AUDIO_MAX_MS:
             new_name = os.path.splitext(file_name)[0] + '.wav'
             audio.export(os.path.join(label_path, new_name), format="wav")
         else:
-            for pos in range(0, len(audio), MAX_MS):
-                section = audio[pos:pos + MAX_MS]
+            for pos in range(0, len(audio), AUDIO_MAX_MS):
+                # Don't allow samples shorter than this
+                if len(audio) - pos < AUDIO_MIN_MS:
+                    break
+                section = audio[pos:pos + AUDIO_MAX_MS]
                 new_name = os.path.splitext(file_name)[0] + '.' + str(pos) + '.wav'
                 section.export(os.path.join(label_path, new_name), format="wav")
 
@@ -196,13 +201,13 @@ def split_audio(file_name, source_directory):
     output_dir = os.path.join(OUTPUT_NOISE_PATH, file_name)
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     count = 0
-    for start in range(0, len(audio), AUDIO_SPLIT_MS):
-        end = start + AUDIO_SPLIT_MS
+    for start in range(0, len(audio), AUDIO_MAX_MS):
+        end = start + AUDIO_MAX_MS
         window = audio[start:end]
         window.export(os.path.join(output_dir, file_name + "." + str(start) + ".wav"), format="wav")
         count += 1
 
-    print("Got", count, " ", AUDIO_SPLIT_MS, "ms files from", file_name)
+    print("Got", count, " ", AUDIO_MAX_MS, "ms files from", file_name)
 
 def split_noise_files(source_directory):
     # Chop all noise files into windows if necessary
