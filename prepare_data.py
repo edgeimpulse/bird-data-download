@@ -54,7 +54,7 @@ TEST_SPLIT = 20
 # Used by `which_set()` from speech commands dataset
 MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 # How long each file can be max
-AUDIO_MAX_MS = 30000
+AUDIO_MAX_MS = 16000
 # How long each file can be min
 AUDIO_MIN_MS = 4000
 
@@ -203,6 +203,9 @@ def split_audio(file_name, source_directory):
     count = 0
     for start in range(0, len(audio), AUDIO_MAX_MS):
         end = start + AUDIO_MAX_MS
+        # Throw away the end if it's not a full sample
+        if end >= len(audio):
+            break
         window = audio[start:end]
         window.export(os.path.join(output_dir, file_name + "." + str(start) + ".wav"), format="wav")
         count += 1
@@ -259,16 +262,20 @@ def select_and_copy_noise(number_to_select, output_directory):
 
     # Get list of tuples showing total number of samples for each noise type
     noise_styles = [(style, len(global_data_noise[style])) for style in global_data_noise]
+    print(noise_styles)
 
     total_noise_samples = count_noise()
+    print(total_noise_samples)
 
     # Determine percentage of total represented by each style
     noise_style_percentages = [(style[0], (100 / total_noise_samples) * style[1])
                                 for style in noise_styles]
+    print(noise_style_percentages)
 
     # Determine number of samples we should take for each style
     noise_style_sample_counts = [(style[0], math.floor((number_to_select / 100) * style[1]))
                             for style in noise_style_percentages]
+    print(noise_style_sample_counts)
 
     total_selected = 0
     # Select the correct number for each style and copy the files
