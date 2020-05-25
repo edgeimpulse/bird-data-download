@@ -54,7 +54,7 @@ TEST_SPLIT = 20
 # Used by `which_set()` from speech commands dataset
 MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 # How long each file can be max
-AUDIO_MAX_MS = 16000
+AUDIO_MAX_MS = 8000
 # How long each file can be min
 AUDIO_MIN_MS = 4000
 
@@ -161,14 +161,15 @@ def download_bird_songs(genus, species, label):
 
 # Move files from one dir to another, deleting the original dir and
 # prefixing the files with a string
-def bulk_move_and_rename_files(original_dir, target_dir, prefix):
+def bulk_move_and_rename_files(original_dir, target_dir, suffix):
     files = os.listdir(original_dir)
 
     for file_name in files:
         if not file_name.endswith(".wav"):
             continue
         original_path = os.path.join(original_dir, file_name)
-        new_name = prefix + "." + file_name
+        without_ext = os.path.splitext(file_name)[0]
+        new_name = without_ext + '.' + suffix + '.wav'
         new_path = os.path.join(target_dir, new_name)
         os.rename(original_path, new_path)
 
@@ -178,8 +179,8 @@ def bulk_move_and_rename_files(original_dir, target_dir, prefix):
 # our other dataset and creating our own splits, we'll combine them (which requires
 # renaming since the file names collide)
 def combine_snsd_files():
-    bulk_move_and_rename_files(DATASET_SNSD_TRAIN_PATH, DATASET_SNSD_PATH, "orig_train")
-    bulk_move_and_rename_files(DATASET_SNSD_TEST_PATH, DATASET_SNSD_PATH, "orig_test")
+    bulk_move_and_rename_files(DATASET_SNSD_TRAIN_PATH, DATASET_SNSD_PATH, "train")
+    bulk_move_and_rename_files(DATASET_SNSD_TEST_PATH, DATASET_SNSD_PATH, "test")
 
 # Downloads extra noise files from this dataset https://github.com/microsoft/MS-SNSD
 def download_and_extract_ms_snsd():
@@ -218,11 +219,34 @@ def split_noise_files(source_directory):
         if file_name.endswith(".wav"):
             split_audio(file_name, source_directory)
 
+def merge_noise_dirs():
+    # We want to group the noise samples in directories by type, so that e.g. AirConditioner_1
+    # and AirConditioner_2 are in the same directory.
+    for dir_name in os.listdir(OUTPUT_NOISE_PATH):
+        old_dir = os.path.join(OUTPUT_NOISE_PATH, dir_name)
+        if not os.path.isdir(old_dir):
+            continue
+        underscore_index = dir_name.rfind('_')
+        if underscore_index == -1:
+            continue
+        dirname_root = dir_name[:underscore_index]
+        # Create dir if does not exist
+        new_dir = os.path.join(OUTPUT_NOISE_PATH, dirname_root)
+        if not os.path.exists(new_dir):
+            Path(new_dir).mkdir(exist_ok=False)
+        # Copy files from current into new dir
+        for f in os.listdir(old_dir):
+            shutil.move(os.path.join(old_dir, f), new_dir)
+        # Delete original dir
+        os.rmdir(old_dir)
+
 def process_noise_files():
     # Chop all noise files into windows if necessary
     if not os.path.exists(OUTPUT_NOISE_PATH):
-        split_noise_files(DATASET_SPEECH_NOISE_PATH)
         split_noise_files(DATASET_SNSD_PATH)
+        # Do this after SNSD but before speech since we don't want to merge the speech ones
+        merge_noise_dirs()
+        split_noise_files(DATASET_SPEECH_NOISE_PATH)
     else:
         print("Noise files already split")
 
@@ -262,20 +286,16 @@ def select_and_copy_noise(number_to_select, output_directory):
 
     # Get list of tuples showing total number of samples for each noise type
     noise_styles = [(style, len(global_data_noise[style])) for style in global_data_noise]
-    print(noise_styles)
 
     total_noise_samples = count_noise()
-    print(total_noise_samples)
 
     # Determine percentage of total represented by each style
     noise_style_percentages = [(style[0], (100 / total_noise_samples) * style[1])
                                 for style in noise_styles]
-    print(noise_style_percentages)
 
     # Determine number of samples we should take for each style
     noise_style_sample_counts = [(style[0], math.floor((number_to_select / 100) * style[1]))
                             for style in noise_style_percentages]
-    print(noise_style_sample_counts)
 
     total_selected = 0
     # Select the correct number for each style and copy the files
