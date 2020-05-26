@@ -57,6 +57,7 @@ MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 AUDIO_MAX_MS = 8000
 # How long each file can be min
 AUDIO_MIN_MS = 4000
+AUDIO_SAMPLE_RATE = 16000
 
 # Hold paths to data
 global_data_noise = {}
@@ -145,8 +146,8 @@ def download_bird_songs(genus, species, label):
 
         s = io.BytesIO(r.content)
         audio = AudioSegment.from_file(s, format="mp3")
+        audio = audio.set_frame_rate(AUDIO_SAMPLE_RATE)
         # Split audio
-        AUDIO_MAX_MS = 30000
         if len(audio) <= AUDIO_MAX_MS:
             new_name = os.path.splitext(file_name)[0] + '.wav'
             audio.export(os.path.join(label_path, new_name), format="wav")
