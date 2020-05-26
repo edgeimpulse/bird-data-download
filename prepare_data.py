@@ -401,6 +401,8 @@ def init():
     download_and_extract_speech_commands_dataset()
     download_and_extract_ms_snsd()
     download_bird_songs('baeolophus', 'inornatus', 'titmouse')
+    download_bird_songs('zenaida', 'macroura', 'mourningdove')
+    download_bird_songs('haemorhous', 'mexicanus', 'housefinch')
     process_noise_files()
 
     # # Set up training/test splits
