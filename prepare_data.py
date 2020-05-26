@@ -417,4 +417,4 @@ if __name__ == "__main__":
     percentages = [100]
 
     for percentage in percentages:
-        create_new_split(["titmouse"], sample_percentage=percentage)
+        create_new_split(['titmouse', 'mourningdove', 'housefinch'], sample_percentage=percentage)
