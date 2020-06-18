@@ -400,6 +400,7 @@ def init():
     create_output_directories()
     download_and_extract_speech_commands_dataset()
     download_and_extract_ms_snsd()
+    # Add new bird types here (check they have data on https://www.xeno-canto.org first)
     download_bird_songs('baeolophus', 'inornatus', 'titmouse')
     download_bird_songs('zenaida', 'macroura', 'mourningdove')
     process_noise_files()
@@ -410,10 +411,11 @@ def init():
 
 if __name__ == "__main__":
     init()
-    # Create datasets with varying amounts of data
+    # Add items to the array to create multiple datasets with different percentages of the total data, e.g. 100% or 50%.
     # Note: All datasets will be balanced, so their size depends on the size of their smallest class (including noise).
     #       The same test set is used for each dataset, independent of size.
     percentages = [100]
 
     for percentage in percentages:
+        # Add rows here to output datasets with different types of birds, using the name passed into download_bird_songs() above
         create_new_split(['titmouse', 'mourningdove'], sample_percentage=percentage)
